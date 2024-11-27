@@ -1,0 +1,90 @@
+---
+title: "FE570 - Project"
+author: "Naveen Nagarajan"
+date: "2024-11-24"
+output: pdf_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(error = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+#knitr::opts_knit$set(root.dir = "~/R/FE535/")
+#knitr::opts_knit$set(root.dir = "/Users/naveen/Desktop/workspace/Stevens FA/FE570/project")
+knitr::opts_knit$set(root.dir = "/home/nnagarajan/workspace/Stevens FA/FE570/project/")
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=100), tidy=TRUE)
+library(tidyverse)
+library(readxl)
+options(scipen=999)
+options(digits1.secs=3)
+library(quantmod)
+library(xts)
+library(tidyquant)
+library(tseries)
+library(glue)
+library(reshape2)
+set.seed(1)
+library(highfrequency)
+library(caret)
+library(lubridate)
+library(data.table)
+```
+
+# Empirical analysis of microstructure data.
+
+```{r}
+trades<-read.csv("trades_ETHUSD.csv")
+quotes<-read.csv("quotes_ETHUSD.csv")
+
+
+quotes$timestamp<-ymd_hms(quotes$timestamp)
+quotes <- as.data.table(quotes)
+
+trades$timestamp<-ymd_hms(trades$timestamp)
+trades <- as.data.table(trades)
+
+
+trades<-trades%>%mutate(DT=timestamp)%>%select(DT,symbol,size,price,tickDirection)
+quotes<-quotes%>%mutate(BID=bidPrice,ASK=askPrice,DT=timestamp)%>%select(DT,symbol,bidSize,BID,askSize,ASK)
+taq.ethusd<-matchTradesQuotes(trades,quotes)
+```
+## Perform a study of liquidity: compute the spread measures (quoted spread, effective spread, realized spread) in time buckets and study the intra-day liquidity dynamics
+
+```{r echo=TRUE}
+
+# Calculate effective spread
+quoted_spread <- taq.ethusd$OFR - taq.ethusd$BID
+
+# Calculate midpoint
+midpoint <- (taq.ethusd$OFR + taq.ethusd$BID) / 2
+
+# Calculate effective spread
+effective_spread <- 2 * abs(taq.ethusd$PRICE - midpoint)
+
+# Set time horizon for future midpoint
+future_interval <- 5 * 60  # 5 minutes in seconds
+
+# Shift midpoint by future_interval to estimate future midpoint
+future_midpoint <- shift(midpoint, future_interval)
+
+# Calculate realized spread
+realized_spread <- 2 * (taq.ethusd$PRICE - future_midpoint)
+
+# Plotting
+par(mfrow = c(3, 1))  # Split plots
+plot(quoted_spread, type = "l", main = "Quoted Spread", ylab = "Spread", xlab = "Time")
+plot(effective_spread, type = "l", main = "Effective Spread", ylab = "Spread", xlab = "Time")
+plot(realized_spread, type = "l", main = "Realized Spread", ylab = "Spread", xlab = "Time")
+
+```
+
+## Estimate the volatility using intraday data
+```{r echo=TRUE}
+
+```
+## Estimate the probability of informed trading (PIN measure)
+```{r echo=TRUE}
+
+```
