@@ -33,7 +33,9 @@ library(data.table)
 
 # Empirical analysis of microstructure data.
 
-```{r}
+### 1. Perform a study of liquidity: compute the spread measures (quoted spread, effective spread, realized spread) in time buckets and study the intra-day liquidity dynamics
+
+```{r echo=TRUE}
 trades<-read.csv("trades_ETHUSD.csv")
 quotes<-read.csv("quotes_ETHUSD.csv")
 
@@ -49,7 +51,7 @@ trades<-trades%>%mutate(DT=timestamp)%>%select(DT,symbol,size,price,tickDirectio
 quotes<-quotes%>%mutate(BID=bidPrice,ASK=askPrice,DT=timestamp)%>%select(DT,symbol,bidSize,BID,askSize,ASK)
 taq.ethusd<-matchTradesQuotes(trades,quotes)
 ```
-### 1. Perform a study of liquidity: compute the spread measures (quoted spread, effective spread, realized spread) in time buckets and study the intra-day liquidity dynamics
+
 
 ```{r echo=TRUE}
 
