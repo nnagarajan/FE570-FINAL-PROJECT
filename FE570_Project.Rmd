@@ -1,6 +1,6 @@
 ---
 title: "FE570 - Project"
-author: "Naveen Nagarajan"
+author: "Naveen,Vineel,Amod,Amin"
 date: "2024-11-24"
 output: pdf_document
 ---
