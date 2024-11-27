@@ -11,9 +11,8 @@ knitr::opts_chunk$set(echo = FALSE)
 knitr::opts_chunk$set(error = FALSE)
 knitr::opts_chunk$set(warning = FALSE)
 knitr::opts_chunk$set(message = FALSE)
-#knitr::opts_knit$set(root.dir = "~/R/FE535/")
-#knitr::opts_knit$set(root.dir = "/Users/naveen/Desktop/workspace/Stevens FA/FE570/project")
-knitr::opts_knit$set(root.dir = "/home/nnagarajan/workspace/Stevens FA/FE570/project/")
+knitr::opts_knit$set(root.dir = "/Users/naveen/Desktop/workspace/Stevens FA/FE570/project")
+#knitr::opts_knit$set(root.dir = "/home/nnagarajan/workspace/Stevens FA/FE570/project/")
 knitr::opts_chunk$set(tidy.opts=list(width.cutoff=100), tidy=TRUE)
 library(tidyverse)
 library(readxl)
@@ -50,7 +49,7 @@ trades<-trades%>%mutate(DT=timestamp)%>%select(DT,symbol,size,price,tickDirectio
 quotes<-quotes%>%mutate(BID=bidPrice,ASK=askPrice,DT=timestamp)%>%select(DT,symbol,bidSize,BID,askSize,ASK)
 taq.ethusd<-matchTradesQuotes(trades,quotes)
 ```
-## Perform a study of liquidity: compute the spread measures (quoted spread, effective spread, realized spread) in time buckets and study the intra-day liquidity dynamics
+### 1. Perform a study of liquidity: compute the spread measures (quoted spread, effective spread, realized spread) in time buckets and study the intra-day liquidity dynamics
 
 ```{r echo=TRUE}
 
@@ -80,11 +79,11 @@ plot(realized_spread, type = "l", main = "Realized Spread", ylab = "Spread", xla
 
 ```
 
-## Estimate the volatility using intraday data
+### 2. Estimate the volatility using intraday data
 ```{r echo=TRUE}
 
 ```
-## Estimate the probability of informed trading (PIN measure)
+### 3. Estimate the probability of informed trading (PIN measure)
 ```{r echo=TRUE}
 
 ```
