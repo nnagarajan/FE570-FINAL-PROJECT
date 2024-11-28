@@ -1,5 +1,6 @@
 ---
-title: "FE570 - Project"
+title: "FE570 - Project
+  Empirical analysis of microstructure data."
 author: "Naveen,Vineel,Amod,Amin"
 date: "2024-11-24"
 output: pdf_document
@@ -15,25 +16,24 @@ knitr::opts_knit$set(root.dir = "/Users/naveen/Desktop/workspace/Stevens FA/FE57
 #knitr::opts_knit$set(root.dir = "/home/nnagarajan/workspace/Stevens FA/FE570/project/")
 knitr::opts_chunk$set(tidy.opts=list(width.cutoff=100), tidy=TRUE)
 library(tidyverse)
-library(readxl)
 options(scipen=999)
 options(digits1.secs=3)
-library(quantmod)
 library(xts)
-library(tidyquant)
-library(tseries)
 library(glue)
-library(reshape2)
 set.seed(1)
 library(highfrequency)
-library(caret)
 library(lubridate)
 library(data.table)
+library(TTR)
+library(timeDate)
+library(InfoTrad)
 ```
 
 # Empirical analysis of microstructure data.
 
 ### 1. Perform a study of liquidity: compute the spread measures (quoted spread, effective spread, realized spread) in time buckets and study the intra-day liquidity dynamics
+
+
 
 ```{r echo=TRUE}
 trades<-read.csv("trades_ETHUSD.csv")
@@ -83,9 +83,197 @@ plot(realized_spread, type = "l", main = "Realized Spread", ylab = "Spread", xla
 
 ### 2. Estimate the volatility using intraday data
 ```{r echo=TRUE}
+# loads a xts file called tqdataMktHrs
+tqdata <- taq.ethusd
+
+head(tqdata)
+tail(tqdata)
+
+length(tqdata$SIZE)
+
+# summarize trades by exchange
+
+length(tqdata$SIZE)
+
+############################################
+#####################################################
+# Plot prices 
+
+asks <- as.numeric(tqdata$OFR)
+bids <- as.numeric(tqdata$BID)
+mids <- 0.5*bids + 0.5*asks
+
+pmin = min(as.numeric(tqdata$PRICE))
+pmax = max(as.numeric(tqdata$PRICE))
+plot(as.numeric(tqdata$PRICE),col="red", type="l", ylab="Trade price", 
+     xlab="Trade #", main="Trade price (9:30-16:00)", ylim=c(pmin-0.1,pmax+0.1))
+lines(mids, type="l", col="blue")
+
+plot(as.numeric(tqdata$SIZE),col="red", type="l", 
+     ylab="Trade size", 
+     xlab="Trade #", main="Trade volume", ylim=c(0,100000))
+
+###############################################################
+
+# Draw the signature plot = RV(sampling freq)
+# Signature plot = plot of RV as a function of the sampling freq
+
+p <- as.numeric(tqdata$PRICE)
+
+realizedVar <- function(q){rCov(diff(p, lag=q, differences=1))/q}
+
+realizedVar(1)
+sqrt(realizedVar(1))
+
+# compute the signature plot RV(lag)
+
+rv_data <- NULL
+
+for(q in 1:200){
+  
+  rv_data <- c(rv_data, realizedVar(q))
+
+}
+
+plot(rv_data, type ="l", main="Signature plot")
+
+# q5min is the number of trades per 5 mins. 
+# Compute q5min = n(trades)/5mins. 
+# Hint: there are 390 mins in a trading day
+# Use it to compute the realized variance by sampling every 5 mins
+
+n.trades <- dim(tqdata)[1]
+
+q5min <- n.trades*5/390
+
+  rv5 = realizedVar(q5min)
+  
+sqrt(rv5)
+
+#sqrt(252)*sqrt(rv5)/av.price
+
+
+plot(rv_data, type ="l", main="Signature plot for prices", 
+     ylim=c(14000,20000), xlab="lag")
+abline(h=rv5,col="red")
+#######################################################################
+# Now Roll estimate of volatility
+# autocorrelation of price changes
+dp <- diff(p)
+
+acf(dp, main="ACF of diff(price)")
+
+# autocorrelation of trade signs
+ts <- getTradeDirection(tqdata)
+acf(ts, main="ACF of trade signs")
+
+
+######################################################################
+# Roll model estimate of the volatility the tqdata
+# recall p are the trade prices, dp = p(t) - p(t-1) are price changes
+
+dp = diff(p)
+
+# compute the covariance of the price changes, for the Roll model analysis
+covdp <- acf(dp, lag.max=10, 
+            type="covariance", plot=TRUE,
+            main="Autocovariance of price changes")
+
+gamma0 <- covdp$acf[1]
+gamma1 <- covdp$acf[2]
+
+sig2u = gamma0 + 2*gamma1 
+
+rvRoll <- sig2u*n.trades
+
+sigRoll <- sqrt(sig2u*n.trades)
+
+plot(rv_data, type ="l", 
+     main="Signature plot for prices + Roll",
+      ylim=c(14000,20000))
+abline(h=rv5,col="red")
+abline(h=rvRoll,col="blue")
+##############################################################
+# Decompose the total volatility (gamma0) into 
+# i) Fundamental gammma0 + 2*gamma1
+# ii) Trading noise (-2*gamma1)
+
+n.trades
+
+av.price <- mean(p)
+av.price   # average trade price = 139.25
+
+#daily volatility
+sig.day <- sqrt(sig2u*n.trades)
+sig.day    #2.679
+
+#annualized volatility
+sig.ann <- sqrt(252)*sig.day
+sig.ann   # 42.54
+
+# log-normal volatility
+sig.ann.ln <- sig.ann/av.price
+sig.ann.ln     #30.55%
+
+# compare with the total volatility
+sig.day.total <- sqrt(gamma0*n.trades)
+sig.day.total    #7.22
+
+sig.ann.total <- sqrt(252)*sig.day.total
+sig.ann.total
+
+sig.ann.ln.total <- sig.ann.total/av.price
+sig.ann.ln.total  # 82.35%
+
+
 
 ```
+
 ### 3. Estimate the probability of informed trading (PIN measure)
 ```{r echo=TRUE}
+# count B/S events
 
+x <- getTradeDirection(taq.ethusd)
+
+tradeDirection <- matrix(x)
+
+buy_side <- which(tradeDirection >0)
+
+num_buy_side <- length(matrix(buy_side))
+num_sell_side <- length(tradeDirection) - length(matrix(buy_side))
+
+ntrades <- cbind(num_buy_side, num_sell_side)
+
+ntrades
+
+# run optimization of likelihood function
+
+Buy <- c(350,250,500,552)
+Sell <- c(382, 500, 463, 550)
+data = cbind(Buy,Sell)
+
+
+par0 = c(0.5,0.5,300,400,500)
+
+
+# Call EHO function
+EHO_out = EHO(data)
+model = optim(par0, EHO_out, gr = NULL, 
+              method = c("BFGS"), hessian = FALSE)
+
+model
+
+## Parameter Estimates
+model$par[1] # Estimate for alpha
+
+model$par[2] # Estimate for delta
+
+model$par[3] # Estimate for mu
+
+model$par[4] # Estimate for eb
+
+model$par[5] # Estimate for es
+
+## Estimate for PIN
+(model$par[1]*model$par[3])/((model$par[1]*model$par[3])+model$par[4]+model$par[5])
 ```
