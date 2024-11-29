@@ -37,7 +37,7 @@ library(nanotime)
 
 
 ```{r echo=TRUE}
-tsla.taq<-read.csv("tsla_taq_20241021.csv")
+tsla.taq<-read.csv("tsla_taq_20241021_condensed.csv")
 
 tsla.taq<- tsla.taq%>%select(Date.Time,Ex.Cntrb.ID,Bid.Price,Bid.Size,Ask.Price,Ask.Size,Tick.Dir.,Price,Volume)
 
@@ -55,18 +55,18 @@ tsla.taq<-tsla.taq%>%mutate(DT=Date.Time,Exchange=Ex.Cntrb.ID,BID=Bid.Price,OFR=
 
 ```{r echo=TRUE}
 
-taq.ethusd<-tsla.taq%>%filter(Exchange=="ADF")
-#taq.ethusd<-trades%>%filter(Exchange=="NAS")
+tsla.taq.adf<-tsla.taq%>%filter(Exchange=="ADF")
+#tsla.taq.adf<-trades%>%filter(Exchange=="NAS")
 
 # Calculate effective spread
-quoted_spread <- taq.ethusd$OFR - taq.ethusd$BID
+quoted_spread <- tsla.taq.adf$OFR - tsla.taq.adf$BID
 mean(quoted_spread)
 
 # Calculate midpoint
-midpoint <- (taq.ethusd$OFR + taq.ethusd$BID) / 2
+midpoint <- (tsla.taq.adf$OFR + tsla.taq.adf$BID) / 2
 
 # Calculate effective spread
-effective_spread <- 2 * abs(taq.ethusd$PRICE - midpoint)
+effective_spread <- 2 * abs(tsla.taq.adf$PRICE - midpoint)
 
 # Set time horizon for future midpoint
 future_interval <- 5 * 60  # 5 minutes in seconds
@@ -75,7 +75,7 @@ future_interval <- 5 * 60  # 5 minutes in seconds
 future_midpoint <- shift(midpoint, future_interval)
 
 # Calculate realized spread
-realized_spread <- 2 * (taq.ethusd$PRICE - future_midpoint)
+realized_spread <- 2 * (tsla.taq.adf$PRICE - future_midpoint)
 
 # Plotting
 par(mfrow = c(3, 1))  # Split plots
@@ -88,7 +88,7 @@ plot(realized_spread, type = "l", main = "Realized Spread", ylab = "Spread", xla
 ### 2. Estimate the volatility using intraday data
 ```{r echo=TRUE}
 # loads a xts file called tqdataMktHrs
-tqdata <- taq.ethusd
+tqdata <- tsla.taq.adf
 
 head(tqdata)
 tail(tqdata)
@@ -237,7 +237,7 @@ sig.ann.ln.total  # 82.35%
 ```{r echo=TRUE}
 # count B/S events
 
-x <- getTradeDirection(taq.ethusd)
+x <- getTradeDirection(tsla.taq.adf)
 
 tradeDirection <- matrix(x)
 
